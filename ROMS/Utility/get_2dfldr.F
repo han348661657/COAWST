@@ -124,6 +124,7 @@
 !
       IF (Linquire) THEN
         job=-2
+        ! 读取netcdf文件，返回Iinfo,Finfo和Sinfo数据，分别包含int型、float型数据
         CALL inquiry (ng, model, job, Iout, Irec, 1, ifield, ncid,      &
      &                Lmulti, nfiles, S)
         IF (FoundError(exit_flag, NoError, __LINE__,                    &

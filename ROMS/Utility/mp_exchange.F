@@ -387,8 +387,8 @@
 !
       Imin=LBi
       Imax=UBi
-      Jmin=LBj
-      Jmax=UBj
+      Jmin=LBj !J-dimension lower bound.
+      Jmax=UBj !J-dimension Upper bound.
       Ilen=Imax-Imin+1
       Jlen=Jmax-Jmin+1
       IF (EW_periodic.or.NS_periodic) THEN
@@ -413,9 +413,9 @@
 !
       IF (Wexchange) THEN
         sizeW=0
-        DO m=1,GsendW
-          mc=(m-1)*Jlen
-          i=Istr+m-1
+        DO m=1,GsendW !GsendW=Nghost=2
+          mc=(m-1)*Jlen ! Jlen=Jmax-Jmin+1 J维度的长度 mc=[0 Jlen]
+          i=Istr+m-1 ! Istr:Starting tile index in the I-direction.
           DO j=Jmin,Jmax
             sizeW=sizeW+1
             jcW=1+(j-Jmin)+mc

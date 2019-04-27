@@ -172,9 +172,11 @@
 !
 # ifdef WAVES_OCEAN
         DO ng=1,Ngrids
+		  ! 初始化AttrVect数据类型，存储整数和实数据矢量， indexed by the names of the fields stored in List format
           CALL initialize_ocn2wav_coupling (ng, MyRank)
         END DO
-        CALL initialize_ocn2wav_routers (MyRank)
+		! 初始化Router(路由)数据类型，包含了在一个组件中mpi N 和 M进程之间发送AttrVect所需的所有信息
+        CALL initialize_ocn2wav_routers (MyRank) !Initialize ocean and wave models coupling stream.
 # endif
 # ifdef AIR_OCEAN
         DO ng=1,Ngrids
@@ -195,7 +197,7 @@
 !-----------------------------------------------------------------------
 !
 !$OMP PARALLEL
-      CALL initial
+      CALL initial !初始化模式所需要的所有变量，如果耦合，则从wrf或swan获取或者发送所需要的变量
 !$OMP END PARALLEL
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
      &               __FILE__)) RETURN

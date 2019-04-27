@@ -503,7 +503,7 @@
 !     dtB        time step of model B                                  !
 !                                                                      !
 !  On Output:                                                          !
-!     lcm        least common multiple                                 !
+!	  gcdlcm     least common multiple                                 !
 !                                                                      !
 !=======================================================================
 !

@@ -71,7 +71,7 @@
 !  If refinement and telescoping refined grids, reset the nested layer
 !  counter to advance all the grid to the current time of the coarser
 !  of all grids (ng=1).
-!
+! 如果细化和伸缩精细网格，重置嵌套层计数器以使所有网格前进到所有网格较粗糙的当前时间（ng = 1）。
      IF (ANY(Telescoping).and.(nl.gt.NestLayers)) THEN
        DO il=1,NestLayers
          DO ig=1,GridsInLayer(il)

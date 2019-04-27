@@ -199,25 +199,21 @@
 !
       KERNEL_LOOP : DO WHILE (Time_Step)
 !
-!  In nesting applications, the number of nesting layers (NestLayers) is
-!  used to facilitate refinement grids and composite/refinament grids
-!  combinations. Otherwise, the solution it is looped once for a single
-!  grid application (NestLayers = 1).
-!
+!  在嵌套应用程序中，嵌套层（NestLayers）的数量用于促进细化网格和复合/复合网格组合。 否则，解决方案为单个网格应用程序循环一次（NestLayers = 1）。
         nl=0
 #ifdef NESTING
         TwoWayInterval(1:Ngrids)=0.0_r8
 #endif
 !
         NEST_LAYER : DO WHILE (DoNestLayer)
-!
-!  Determine number of time steps to compute in each nested grid layer
-!  based on the specified time interval (seconds), RunInterval. Non
-!  nesting applications have NestLayers=1. Notice that RunInterval is
-!  set in the calling driver. Its value may span the full period of the
-!  simulation, a multi-model coupling interval (RunInterval > ifac*dt),
-!  or just a single step (RunInterval=0).
-!
+!          
+!  根据指定的时间间隔（秒）RunInterval确定在每个嵌套网格图层中计算的时间步数。 非嵌套应用程序具有NestLayers = 1。 
+! 请注意，在调用驱动程序中设置了RunInterval。 其值可能跨越模拟的整个周期，多模型耦合间隔（RunInterval> ifac * dt）
+! 或仅一步（RunInterval = 0）。
+! Rsteps 完成RunInterval时间窗口的时间步数（整数）
+! Nsteps 当前嵌套层“nl”（整数）中所有网格求解的时间步数
+! nl     nesting layer number (integer)       
+            
           CALL ntimesteps (iNLM, RunInterval, nl, Nsteps, Rsteps)
           IF (FoundError(exit_flag, NoError, __LINE__,                  &
      &                   __FILE__)) RETURN
@@ -228,15 +224,31 @@
           STEP_LOOP : DO istep=1,Nsteps
 !
 !  Set time indices and time clock.
-!
-            DO ig=1,GridsInLayer(nl)
-              ng=GridNumber(ig,nl)
-              iic(ng)=iic(ng)+1
-              nstp(ng)=1+MOD(iic(ng)-ntstart(ng),2)
+!  设置时间索引和时钟。
+!  iic        用于3D原始方程的Timestep计数器。在mod_scalars.F中声明，在initial.F中初始化为0  
+!  ntstart    开始时间步长，ntstart(ng)=INT((time(ng)-dstart*day2sec)/dt(ng))+1     
+!  nstp,nnew   在initial.F 中初始化为1              
+!  nnew      Baroclinic (slow) time-step index corresponding to the    !
+!              newest values for 3D primitive equation variables.      !
+!  nrhs      Baroclinic (slow) time-step index used to compute the     !
+!              right-hand-terms of 3D primitive equation variables.    !
+!  nstp      Baroclinic (slow) time-step index to which the current    !
+!              changes are added to compute new 3D primitive equation  !
+!              variables.                                              !
+              
+              
+            DO ig=1,GridsInLayer(nl)!遍历指定嵌套层nl下的网格
+              ng=GridNumber(ig,nl)!网格ID
+              iic(ng)=iic(ng)+1! 该网格计数步长加1
+              !加入当前变化的斜压（慢）时间步长索引，以计算新的三维原始方程变量。mod（x,y) x除以y取余
+              nstp(ng)=1+MOD(iic(ng)-ntstart(ng),2) 
+              ! Baroclinic（慢）时间步长指数对应于3D原始方程变量的最新值。
               nnew(ng)=3-nstp(ng)
+              ! Baroclinic（慢）时间步长指数用于计算3D原始方程变量的右手项。
               nrhs(ng)=nstp(ng)
               time(ng)=time(ng)+dt(ng)
               tdays(ng)=time(ng)*sec2day
+              ! time_code YYYY-MM-DD hh:mm:ss.ss
               CALL time_string (time(ng), time_code(ng))
               IF (step_counter(ng).eq.Rsteps) Time_Step=.FALSE.
             END DO
@@ -248,7 +260,7 @@
             DO ig=1,GridsInLayer(nl)
               ng=GridNumber(ig,nl)
 !$OMP MASTER
-              CALL get_data (ng)
+              CALL get_data (ng)! 每个title读取属于自己区域的数据
 !$OMP END MASTER
 !$OMP BARRIER
               IF (FoundError(exit_flag, NoError, __LINE__,              &
@@ -258,12 +270,14 @@
 !-----------------------------------------------------------------------
 !  If applicable, process input data: time interpolate between data
 !  snapshots.
+!  set_data This subroutine processes forcing, boundary, climatology, and       !
+!  other input data. It time-interpolates between snapshots.           !            
 !-----------------------------------------------------------------------
 !
             DO ig=1,GridsInLayer(nl)
               ng=GridNumber(ig,nl)
               DO tile=first_tile(ng),last_tile(ng),+1
-                CALL set_data (ng, tile)
+                CALL set_data (ng, tile) ! 将读取的数据中的ghost 点数据与邻近title做交换
               END DO
 !$OMP BARRIER
             END DO
@@ -299,7 +313,7 @@
 !
             DO ig=1,GridsInLayer(nl)
               ng=GridNumber(ig,nl)
-              IF (iic(ng).eq.ntstart(ng)) THEN
+              IF (iic(ng).eq.ntstart(ng)) THEN ! 如果iic等于开始步长，进行zeta和depth初始化
 !
 !  Initialize free-surface and compute initial level thicknesses and
 !  depths.
@@ -321,7 +335,8 @@
 !
 !  Extract donor grid initial data at contact points and store it in
 !  REFINED structure so it can be used for the space-time interpolation.
-!
+! 在接触点处提取施主网格初始数据并将其存储在REFINED结构中，以便可以用于时空插值。
+
                 IF (RefinedGrid(ng)) THEN
                   CALL nesting (ng, iNLM, ngetD)
                 END IF
@@ -357,7 +372,9 @@
 !  Couple ocean to atmosphere and wave model grids.
 !-----------------------------------------------------------------------
             IF (iic(ng).ne.ntstart(ng)) THEN
-              CALL ocean_coupling (nl)
+! ocean_coupling 包括主驱动程序以确定执行交换的网格。                
+! 通过调用ocnfatm_coupling, ocnfwav_coupling 和  ocn2atm_coupling, ocn2wav_coupling完成数据交换             
+              CALL ocean_coupling (nl) 
             END IF
 # endif
 # if defined INWAVE_MODEL

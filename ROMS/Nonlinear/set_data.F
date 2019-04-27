@@ -140,6 +140,7 @@
      &                       FORCES(ng) % icec                          &
      &                   )
 #  else
+! 对相邻的tile交换ghost点，
       CALL set_2dfld_tile (ng, tile, iNLM, idCfra,                      &
      &                     LBi, UBi, LBj, UBj,                          &
      &                     FORCES(ng)%cloudG,                           &

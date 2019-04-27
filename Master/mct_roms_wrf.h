@@ -441,7 +441,7 @@
 !  Initialize attribute vector holding the export data code strings of
 !  the atmosphere model. The Asize is the number of grid point on this
 !  processor.
-!
+!	初始化属性向量，保存大气模型的导出数据代码字符串。 Asize是此处理器上的网格点数。
       Asize=GlobalSegMap_lsize(GlobalSegMap_G(ng)%GSMapROMS,            &
      &                         OCN_COMM_WORLD)
       CALL AttrVect_init(AttrVect_G(ng)%atm2ocn_AV,                     &
@@ -450,7 +450,7 @@
 !
 !  Initialize attribute vector holding the export data of
 !  the atm model.
-!
+!	初始化保存atm模型的导出数据的属性向量。
 !
 !  Initialize attribute vector that contain the data strings from
 !  the ocean model.
@@ -538,7 +538,8 @@
       ALLOCATE(Router_A(Nocn_grids,Natm_grids))
 !
 !  Initialize routers to the wave model component.
-!
+! 路由器数据类型包含在M MPI进程上的组件和N MPI进程上的组件之间发送AttrVect所需的所有信息。
+! 该模块定义了Router数据类型，并提供了创建和销毁数据类型的方法。
       DO ng=1,Nocn_grids
         DO ia=1,Natm_grids
           ATMid=atmids(ia)
@@ -923,6 +924,7 @@
      &                   SMPlus_A(ng,ia)%A2OMatPlus,                    &
      &                   AttrVect_G(ng)%atm2ocn_AV)
 #else
+	! irecv_(aV, Rout, Tag, Sum) m_Transfer.F90 
       CALL MCT_irecv (AttrVect_G(ng)%atm2ocn_AV,                        &
      &                Router_A(ng,ia)%ROMStoWRF, Tag)
 !     Wait to make sure the WRF data has arrived.

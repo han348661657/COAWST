@@ -135,6 +135,7 @@
 !
 !!    CALL my_getarg (1, Iname)
       IF (Master) CALL my_getarg (1, Iname)
+      ! 将in文件名广播到所有进程
       CALL mp_bcasts (1, model, Iname)
       OPEN (inp, FILE=TRIM(Iname), FORM='formatted', STATUS='old',      &
      &      ERR=20)
@@ -157,6 +158,7 @@
 
       CALL read_PhyPar (model, inp, out, Lwrite)
 #ifdef DISTRIBUTE
+! 广播到所有节点 [ng,模式标识符，广播的变量]
       CALL mp_bcasti (1, model, exit_flag)
 #endif
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
